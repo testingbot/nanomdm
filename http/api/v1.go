@@ -14,6 +14,7 @@ const (
 	APIEndpointPushCert = "/pushcert"
 	APIEndpointPush     = "/push/"    // note trailing slash
 	APIEndpointEnqueue  = "/enqueue/" // note trailing slash
+	APIEndpointReport   = "/report/"  // note trailing slash
 )
 
 // Mux can register HTTP handlers.
@@ -77,4 +78,19 @@ func HandleAPIv1(prefix string, mux Mux, logger log.Logger, store APIStorage, pu
 			),
 		),
 	)
+
+	// register API handler for reading command reports, when the
+	// storage keeps them
+	if reports, ok := store.(storage.CommandReportRetriever); ok {
+		mux.Handle(
+			prefix+APIEndpointReport,
+			http.StripPrefix( // we strip the prefix to use the path as id/uuid
+				prefix+APIEndpointReport,
+				CommandReportHandler(
+					reports,
+					logger.With("handler", handlerName(APIEndpointReport)),
+				),
+			),
+		)
+	}
 }
