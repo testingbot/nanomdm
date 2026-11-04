@@ -17,3 +17,11 @@ type CommandAndReportResultsStore interface {
 type CommandEnqueuer interface {
 	EnqueueCommand(ctx context.Context, id []string, cmd *mdm.Command) (map[string]error, error)
 }
+
+// CommandReportRetriever retrieves the report an enrollment sent for a command.
+type CommandReportRetriever interface {
+	// RetrieveCommandReport returns the status and raw plist of the last
+	// report enrollment id sent for commandUUID. found is false when the
+	// enrollment has not reported on that command (yet).
+	RetrieveCommandReport(ctx context.Context, id, commandUUID string) (status string, raw []byte, found bool, err error)
+}

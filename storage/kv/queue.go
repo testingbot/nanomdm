@@ -163,3 +163,23 @@ func (s *KV) EnqueueCommand(ctx context.Context, ids []string, cmd *mdm.Command)
 	})
 	return errs, err
 }
+
+// RetrieveCommandReport returns the last report enrollment id sent for
+// commandUUID. StoreCommandReport keeps the status and raw report after
+// the command has left the queue, so this works for acknowledged commands.
+func (s *KV) RetrieveCommandReport(ctx context.Context, id, commandUUID string) (string, []byte, bool, error) {
+	s.queueLocks.RLock(id)
+	defer s.queueLocks.RUnlock(id)
+	q := newQueue(s.queue, id, primaryQueue)
+	status, err := s.queue.Get(ctx, q.itemKeyName(commandUUID, keyQueueStatus))
+	if errors.Is(err, kv.ErrKeyNotFound) {
+		return "", nil, false, nil
+	} else if err != nil {
+		return "", nil, false, fmt.Errorf("getting status of %s: %w", commandUUID, err)
+	}
+	raw, err := s.queue.Get(ctx, q.itemKeyName(commandUUID, keyQueueReport))
+	if err != nil && !errors.Is(err, kv.ErrKeyNotFound) {
+		return "", nil, false, fmt.Errorf("getting report of %s: %w", commandUUID, err)
+	}
+	return string(status), raw, true, nil
+}
